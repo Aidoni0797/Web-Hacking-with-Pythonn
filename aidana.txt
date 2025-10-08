@@ -1,0 +1,48 @@
+#Esep - 1
+zhauap=0
+
+for i in range(1, 6):
+    san = int(input(f"{i}-shi san engizy kerek:"))
+    zhauap += san
+
+print(f"Barlyk sanyn kosyndysy = {zhauap}")
+
+#Esep - 2 
+for i in range(5):
+    for j in range(5):
+        print("*", end="\t")
+    print("")
+	
+#Esep - 3
+n = int(input('San engiz:'))
+zhauap = 0
+for i in range(1,n+1):
+    if i%3 == 0:
+        zhauap += i
+
+print(f"3-ke bolinetin san kosyndysy:{zhauap}")
+
+#Esep - 4
+n = int(input('San engiz:'))
+zhauap = 1
+for i in range(1,n+1):
+    zhauap *= i
+
+print(f"N factorial: {zhauap}")
+
+#Esep - 5
+import random
+
+birinshi_oiunshy = random.randint(0, 100)
+ekinshi_oiunshy = random.randint(0, 100)
+
+print(f"birinshi_oiunshy sanu: {birinshi_oiunshy}")
+print(f"ekinshi_oiunshy sanu: {ekinshi_oiunshy}")
+
+if birinshi_oiunshy>ekinshi_oiunshy:
+    print('birinshi_oiunshy zhendi')
+elif birinshi_oiunshy<ekinshi_oiunshy:
+    print('ekinshi_oiunshy zhendi')
+else:
+    print('tenbe ten')
+	
